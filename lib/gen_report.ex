@@ -45,6 +45,14 @@ defmodule GenReport do
     |> Enum.reduce(report_acc(), fn line, report -> sum_hours(line, report) end)
   end
 
+  def build_from_many do
+    {:error, "Please, provide a list of strings."}
+  end
+
+  def build_from_many(files) when not is_list(files) do
+    {:error, "Please, provide a list of strings."}
+  end
+
   def build_from_many(files) do
     files
     |> Task.async_stream(&build/1)
@@ -86,7 +94,17 @@ defmodule GenReport do
        ) do
     all_hours = merge_maps(all_hours1, all_hours2)
 
-    # build_report(all_hours, hours_per_month, hours_per_year)
+    hours_per_month =
+      Enum.reduce(@workers, months_per_worker_acc(), fn worker, report ->
+        Map.put(report, worker, merge_maps(hours_per_month1[worker], hours_per_month2[worker]))
+      end)
+
+    hours_per_year =
+      Enum.reduce(@workers, years_per_worker_acc(), fn worker, report ->
+        Map.put(report, worker, merge_maps(hours_per_year1[worker], hours_per_year2[worker]))
+      end)
+
+    build_report(all_hours, hours_per_month, hours_per_year)
   end
 
   defp merge_maps(map1, map2) do
